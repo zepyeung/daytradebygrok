@@ -3,9 +3,6 @@ import pandas as pd
 import requests
 from datetime import datetime
 
-TELEGRAM_TOKEN = "8745780257:AAFkzTq8P-qxVu785l0kKiJ-yiAw2SaC8Bc"   # 直接寫死或用 secrets
-TELEGRAM_CHAT_ID = "363146569"
-
 def send_to_telegram(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "HTML"}
