@@ -9,7 +9,7 @@ import sqlite3
 import requests
 
 # ====================== 簡單密碼登入 ======================
-PASSWORD = "stocktrade2026"   # ← 你可以自己改成更強的密碼，例如 "HoKwanDayTrade888"
+PASSWORD = "kl;'"   # ← 你可以自己改成更強的密碼，例如 "HoKwanDayTrade888"
 
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
