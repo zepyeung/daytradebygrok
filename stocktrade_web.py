@@ -28,10 +28,10 @@ if not st.session_state.authenticated:
 st.set_page_config(page_title="StockTrade Web v2.9", page_icon="📈", layout="wide")
 
 st.sidebar.title("📱 StockTrade Web App v2.9")
-st.sidebar.success("✅ 已登入 | 密碼使用 Secrets")
+st.sidebar.success("✅ 已登入")
 
 st.title("📈 StockTrade Web v2.9 - 美股自動掃描器")
-st.markdown("**Pre-Market + 開市後每小時推送（GitHub Actions 後台自動）**")
+st.markdown("**手動掃描無論有無結果都會推送**")
 
 tab1, tab2, tab3 = st.tabs(["🔥 開市後即時掃描", "⭐ My Day Trade Picks", "📊 Daily Close Review"])
 
@@ -46,15 +46,6 @@ def send_to_telegram(message):
         return True
     except:
         return False
-
-# ====================== 測試推送按鈕（新增） ======================
-if st.sidebar.button("🔍 測試推送（立即發送到Telegram）", type="primary"):
-    test_msg = f"<b>✅ StockTrade 測試推送</b>\n時間：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n測試成功！\n\n系統運行正常。"
-    if send_to_telegram(test_msg):
-        st.sidebar.success("✅ 測試訊息已發送到 Telegram！")
-        st.toast("測試推送成功！請檢查 Telegram", icon="✅")
-    else:
-        st.sidebar.error("❌ 測試推送失敗，請檢查 Secrets 設定")
 
 # ====================== SQLite ======================
 DB_FILE = "stocktrade.db"
@@ -92,18 +83,59 @@ with tab1:
     **目前掃描系數（已調低）：**
     - 最低漲跌幅： **2.5%**
     - 最低 RVOL： **2.0x**
-    - 只限週一至五推送
-    - GitHub Actions 負責後台自動推送
+    - 手動掃描：無論有無結果都會推送
     """)
 
-    if st.button("手動掃描一次"):
-        st.success("手動掃描完成（GitHub Actions 負責自動推送）")
+    if st.button("🔄 手動掃描一次（無論結果都推送）", type="primary"):
+        with st.spinner("正在手動掃描..."):
+            tickers = ["NVDA","TSLA","AAPL","AMD","SMCI","ARM","PLTR","META","GOOGL","AMZN","MSFT","HOOD","COIN","MARA","RIOT","SOFI","RIVN","LCID"]
+            results = []
+            
+            for ticker in tickers:
+                try:
+                    data = yf.download(ticker, period="2d", interval="1m", prepost=True)
+                    if data.empty or len(data) < 30: continue
+                    
+                    data['RVOL'] = data['Volume'] / data['Volume'].rolling(20).mean()
+                    data['ATR'] = calculate_atr(data['High'], data['Low'], data['Close'])
+                    
+                    latest = data.iloc[-1]
+                    change_pct = (latest['Close'] - data.iloc[-2]['Close']) / data.iloc[-2]['Close'] * 100
+                    rvol = latest.get('RVOL', 1)
+                    
+                    if abs(change_pct) >= 2.5 and rvol >= 2.0:
+                        score = rvol * abs(change_pct) * 1.1
+                        results.append({
+                            'Ticker': ticker, 'Price': round(latest['Close'],2),
+                            'Change%': round(change_pct,2), 'RVOL': round(rvol,1),
+                            'Score': round(score,2), 'ATR': round(latest['ATR'],2)
+                        })
+                except:
+                    continue
+            
+            now_str = datetime.now().strftime('%H:%M ET')
+            
+            if results:
+                df = pd.DataFrame(results).nlargest(5, 'Score')
+                st.success(f"🔥 手動掃描完成！搵到 {len(df)} 支符合股票")
+                
+                msg = f"<b>🔄 手動掃描結果</b>\n時間：{now_str}\n漲跌≥2.5% | RVOL≥2.0x\n\n"
+                for _, row in df.iterrows():
+                    msg += f"📌 <b>{row['Ticker']}</b> | ${row['Price']} | 漲跌 {row['Change%']}% | RVOL {row['RVOL']}x\n"
+                    msg += "📈 期權推介：高波動環境建議 Long Straddle/Strangle\n⚠️ 期權風險極高\n\n"
+                
+                send_to_telegram(msg)
+                st.dataframe(df[['Ticker','Price','Change%','RVOL','Score']], hide_index=True)
+            else:
+                st.warning("手動掃描完成，但今次無符合條件的股票")
+                msg = f"<b>🔄 手動掃描結果</b>\n時間：{now_str}\n漲跌≥2.5% | RVOL≥2.0x\n\n今日暫無符合條件的股票。"
+                send_to_telegram(msg)
 
 # ====================== TAB 2 & TAB 3 ======================
 with tab2:
     st.subheader("⭐ My Day Trade Picks")
     if not st.session_state.get('picks'):
-        st.info("自動掃描後會加入Picks")
+        st.info("掃描到股票後會自動加入")
     else:
         for ticker, info in st.session_state.picks.items():
             st.write(f"**{ticker}** | 買入 ${info.get('entry_price',0):.2f} | TP ${info.get('ai_tp',0):.2f} | SL ${info.get('ai_sl',0):.2f}")
@@ -115,4 +147,4 @@ with tab3:
         st.balloons()
 
 st.sidebar.button("🚪 登出", on_click=lambda: st.session_state.update({"authenticated": False}))
-st.success("🎉 v2.9 已完成！點擊左側「🔍 測試推送」可即時測試")
+st.success("🎉 v2.9 已完成！手動掃描無論有無結果都會推送")
