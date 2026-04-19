@@ -8,7 +8,7 @@ import sqlite3
 import requests
 
 # ====================== 密碼登入 ======================
-PASSWORD = "stocktrade2026"   # ← 自己改強密碼
+PASSWORD = "qwer6219K"   # ← 自己改強密碼
 
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
