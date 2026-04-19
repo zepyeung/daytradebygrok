@@ -1,12 +1,12 @@
-name: StockTrade 開市後每小時自動掃描
+name: 開市後每小時自動掃描推送
 
 on:
   schedule:
-    - cron: '0 13,14,15,16,17,18,19,20 * * 1-5'   # 美東 9:00 ~ 16:00 每小時一次（週一至五）
+    - cron: '0 14,15,16,17,18,19 * * 1-5'   # 美東 10:00 ~ 15:00 每小時一次
   workflow_dispatch:
 
 jobs:
-  scan:
+  daytrade:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,8 +20,8 @@ jobs:
       - name: Install dependencies
         run: pip install yfinance pandas numpy requests
 
-      - name: 執行開市後掃描
+      - name: 執行開市後每小時推送
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python daytrade_auto.py
+        run: python daytrade-auto.py
