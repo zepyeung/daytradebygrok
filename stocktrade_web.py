@@ -6,9 +6,8 @@ import time
 import numpy as np
 import sqlite3
 import requests
-import os
 
-# ====================== 從 Streamlit Secrets 讀取密碼 ======================
+# ====================== 從 Secrets 讀取密碼 ======================
 PASSWORD = st.secrets["auth"]["password"]
 
 if "authenticated" not in st.session_state:
@@ -16,21 +15,20 @@ if "authenticated" not in st.session_state:
 
 if not st.session_state.authenticated:
     st.title("🔒 StockTrade Web App v2.9 - Private Login")
-    st.subheader("請輸入密碼進入")
     pw = st.text_input("輸入密碼", type="password")
     if st.button("登入"):
         if pw == PASSWORD:
             st.session_state.authenticated = True
             st.rerun()
         else:
-            st.error("❌ 密碼錯誤，請重試")
+            st.error("❌ 密碼錯誤")
     st.stop()
 
 # ====================== 主程式 ======================
 st.set_page_config(page_title="StockTrade Web v2.9", page_icon="📈", layout="wide")
 
 st.sidebar.title("📱 StockTrade Web App v2.9")
-st.sidebar.success("✅ 已登入 | 密碼已使用 Secrets 儲存")
+st.sidebar.success("✅ 已登入 | 密碼使用 Secrets")
 
 st.title("📈 StockTrade Web v2.9 - 美股自動掃描器")
 st.markdown("**Pre-Market + 開市後每小時推送（GitHub Actions 後台自動）**")
@@ -48,6 +46,15 @@ def send_to_telegram(message):
         return True
     except:
         return False
+
+# ====================== 測試推送按鈕（新增） ======================
+if st.sidebar.button("🔍 測試推送（立即發送到Telegram）", type="primary"):
+    test_msg = f"<b>✅ StockTrade 測試推送</b>\n時間：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n測試成功！\n\n系統運行正常。"
+    if send_to_telegram(test_msg):
+        st.sidebar.success("✅ 測試訊息已發送到 Telegram！")
+        st.toast("測試推送成功！請檢查 Telegram", icon="✅")
+    else:
+        st.sidebar.error("❌ 測試推送失敗，請檢查 Secrets 設定")
 
 # ====================== SQLite ======================
 DB_FILE = "stocktrade.db"
@@ -86,6 +93,7 @@ with tab1:
     - 最低漲跌幅： **2.5%**
     - 最低 RVOL： **2.0x**
     - 只限週一至五推送
+    - GitHub Actions 負責後台自動推送
     """)
 
     if st.button("手動掃描一次"):
@@ -107,4 +115,4 @@ with tab3:
         st.balloons()
 
 st.sidebar.button("🚪 登出", on_click=lambda: st.session_state.update({"authenticated": False}))
-st.success("🎉 v2.9 已完成！密碼已改用 Streamlit Secrets 儲存")
+st.success("🎉 v2.9 已完成！點擊左側「🔍 測試推送」可即時測試")
