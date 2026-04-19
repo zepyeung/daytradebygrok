@@ -1,8 +1,10 @@
 import yfinance as yf
 import pandas as pd
 import requests
-import time
 from datetime import datetime
+
+TELEGRAM_TOKEN = "8745780257:AAFkzTq8P-qxVu785l0kKiJ-yiAw2SaC8Bc"
+TELEGRAM_CHAT_ID = "363146569"
 
 def send_to_telegram(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -20,48 +22,47 @@ def calculate_atr(high, low, close, length=14):
 
 tickers = ["NVDA","TSLA","AAPL","AMD","SMCI","ARM","PLTR","META","GOOGL","AMZN","MSFT","HOOD","COIN","MARA","RIOT","SOFI","RIVN","LCID"]
 
-print("開市後每60秒自動掃描已啟動...")
+now = datetime.now()
+if now.weekday() >= 5:
+    print("週末，不推送")
+    exit()
 
-for i in range(60):   # 開市後跑60次（即約1小時），夠用
-    now = datetime.now()
-    print(f"掃描時間: {now.strftime('%H:%M:%S')}")
+print(f"開市後掃描開始 - {now.strftime('%H:%M ET')}")
 
-    results = []
-    for ticker in tickers:
-        try:
-            data = yf.download(ticker, period="2d", interval="1m", prepost=True)
-            if data.empty or len(data) < 30: continue
+results = []
+for ticker in tickers:
+    try:
+        data = yf.download(ticker, period="2d", interval="1m", prepost=True)
+        if data.empty or len(data) < 30: continue
+        
+        data['RVOL'] = data['Volume'] / data['Volume'].rolling(20).mean()
+        data['ATR'] = calculate_atr(data['High'], data['Low'], data['Close'])
+        
+        latest = data.iloc[-1]
+        change_pct = (latest['Close'] - data.iloc[-2]['Close']) / data.iloc[-2]['Close'] * 100
+        rvol = latest.get('RVOL', 1)
+        
+        if abs(change_pct) >= 2.5 and rvol >= 2.0:
+            score = rvol * abs(change_pct) * 1.1
+            results.append({
+                'Ticker': ticker, 
+                'Price': round(latest['Close'],2),
+                'Change%': round(change_pct,2), 
+                'RVOL': round(rvol,1),
+                'Score': round(score,2)
+            })
+    except:
+        continue
 
-            data['RVOL'] = data['Volume'] / data['Volume'].rolling(20).mean()
-            data['ATR'] = calculate_atr(data['High'], data['Low'], data['Close'])
-
-            latest = data.iloc[-1]
-            change_pct = (latest['Close'] - data.iloc[-2]['Close']) / data.iloc[-2]['Close'] * 100
-            rvol = latest.get('RVOL', 1)
-
-            if abs(change_pct) >= 4.0 and rvol >= 3.0:
-                score = rvol * abs(change_pct) * 1.1
-                results.append({
-                    'Ticker': ticker, 'Price': round(latest['Close'],2),
-                    'Change%': round(change_pct,2), 'RVOL': round(rvol,1),
-                    'Score': round(score,2), 'ATR': round(latest['ATR'],2)
-                })
-        except:
-            continue
-
-    if results:
-        df = pd.DataFrame(results).nlargest(5, 'Score')
-        msg = f"<b>🚀 開市後即時掃描 Top5</b>\n時間：{now.strftime('%H:%M ET')}\n有搵到股票！\n\n"
-        for _, row in df.iterrows():
-            msg += f"📌 <b>{row['Ticker']}</b> | ${row['Price']} | 漲跌 {row['Change%']}% | RVOL {row['RVOL']}x\n"
-            option_note = "高波動，建議 Long Straddle/Strangle（買波動）或小心操作\n⚠️ 期權風險極高"
-            msg += f"📈 期權推介：{option_note}\n\n"
-
-        send_to_telegram(msg)
-        print(f"已推送 {len(df)} 支股票到 Telegram")
-    else:
-        print("今次掃描無符合條件股票，唔推送")
-
-    time.sleep(60)   # 每60秒掃一次
-
-print("今日掃描結束")
+if results:
+    df = pd.DataFrame(results).nlargest(5, 'Score')
+    msg = f"<b>🚀 開市後每小時掃描 Top5</b>\n時間：{now.strftime('%H:%M ET')}\n漲跌≥2.5% | RVOL≥2.0x\n\n"
+    
+    for _, row in df.iterrows():
+        msg += f"📌 <b>{row['Ticker']}</b> | ${row['Price']} | 漲跌 {row['Change%']}% | RVOL {row['RVOL']}x\n"
+        msg += "📈 期權推介：高波動，建議 Long Straddle/Strangle\n⚠️ 期權風險極高\n\n"
+    
+    send_to_telegram(msg)
+    print(f"已推送 {len(df)} 支股票")
+else:
+    print("今次無符合股票，不推送")
