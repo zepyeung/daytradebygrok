@@ -1,12 +1,12 @@
-name: Pre-Market Daily Auto Push
+name: Pre-Market 固定每日開市前30分鐘推送
 
 on:
   schedule:
-    - cron: '45 12 * * *'     # UTC 12:45 = 美東 8:45 AM（夏令時）
-  workflow_dispatch:          # 允許你手動點擊測試
+    - cron: '30 13 * * 1-5'     # UTC 13:30 = 美東時間 9:30 AM（夏令時）→ 實際開市前30分鐘左右
+  workflow_dispatch:            # 允許手動測試
 
 jobs:
-  premarket-scan:
+  premarket-push:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,8 +21,8 @@ jobs:
       - name: Install dependencies
         run: pip install yfinance pandas numpy requests
 
-      - name: Run Pre-Market Scanner + Telegram
+      - name: 執行 Pre-Market 固定推送
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python premarket_auto.py
+        run: python premarket_fixed.py
