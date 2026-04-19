@@ -3,8 +3,8 @@ import pandas as pd
 import requests
 from datetime import datetime
 
-TELEGRAM_TOKEN = "8745780257:AAFkzTq8P-qxVu785l0kKiJ-yiAw2SaC8Bc"
-TELEGRAM_CHAT_ID = "363146569"
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 def send_to_telegram(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
