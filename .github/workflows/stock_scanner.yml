@@ -1,0 +1,40 @@
+name: StockTrade Daily Scanner
+
+on:
+  schedule:
+    - cron: '30 13 * * 1-5'   # 美東上午9:30 (開市) → UTC 13:30 (夏令調整)
+    - cron: '0 14 * * 1-5'    # 開市後30分鐘左右
+  workflow_dispatch:  # 手動觸發測試
+
+jobs:
+  premarket:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install yfinance pandas requests
+      - name: Run Pre-Market Scanner
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python premarket_auto.py
+
+  daytrade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install yfinance pandas requests
+      - name: Run Day Trade Scanner
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python daytrade_auto.py
